@@ -3,6 +3,7 @@
 #include <set>
 #include <unordered_map>
 
+#include <iostream>
 #include "../geometry/halfedge.h"
 #include "debug.h"
 
@@ -70,6 +71,15 @@ std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::collapse_face(Halfedge_Me
     return std::nullopt;
 }
 
+void printHalfEdgeDetails(const std::string& name, Halfedge_Mesh::HalfedgeRef h) {
+    std::cout << "NAME: " << name << std::endl;
+    std::cout << "Halfedge: " << h->id() << std::endl;
+    std::cout << "Vertex: " << h->vertex()->id() << std::endl;
+    std::cout << "Edge: " << h->edge()->id() << std::endl;
+    std::cout << "Face: " << h->face()->id() << std::endl;
+    std::cout << "Next: " << h->next()->id() << std::endl;
+    std::cout << "Twin: " << h->twin()->id() << std::endl;
+}
 /*
     This method should flip the given edge and return an iterator to the
     flipped edge.
@@ -77,7 +87,125 @@ std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::collapse_face(Halfedge_Me
 std::optional<Halfedge_Mesh::EdgeRef> Halfedge_Mesh::flip_edge(Halfedge_Mesh::EdgeRef e) {
 
     (void)e;
-    return std::nullopt;
+    std::cout << "Flip edge " << std::endl;
+    // Collect all halfedges
+    std::vector<HalfedgeRef> halfedges;
+    // This should work for all n-gons
+    // The scheme might be the edge would be re-assigned to be between the verteces one rotation away
+    // from the original edge
+    // IF the edge is part of a single face then it cannot be flipped
+#if 0
+    if (e->on_boundary()) {
+        std::cout << "Boundary edge" << std::endl;
+        return std::nullopt;
+    }
+    if (e->halfedge()->face()->is_boundary() || e->halfedge()->twin()->face()->is_boundary()) {
+        std::cout << "Boundary face" << std::endl;
+        return std::nullopt;
+    }
+#endif
+
+    // Collect faces
+    FaceRef f1 = e->halfedge()->face();
+    std::cout << "f1: " << f1->id() << std::endl;
+    FaceRef f2 = e->halfedge()->twin()->face();
+    std::cout << "f2: " << f2->id() << std::endl;
+    // Collect halfedges
+    HalfedgeRef h1 = e->halfedge();
+    printHalfEdgeDetails("\nh1", h1);
+    HalfedgeRef h5 = e->halfedge()->twin();
+    printHalfEdgeDetails("\nh5", h5);
+    HalfedgeRef h2 = h1->next();
+    printHalfEdgeDetails("\nh2", h2);
+    HalfedgeRef h3 = h2->next();
+    printHalfEdgeDetails("\nh3",h3);
+    HalfedgeRef h4 = h3->next();
+    printHalfEdgeDetails("\nh4",h4);
+    HalfedgeRef h6 = h5->next();
+    printHalfEdgeDetails("\nh6",h6);
+    HalfedgeRef h7 = h6->next();
+    printHalfEdgeDetails("\nh7", h7);
+    HalfedgeRef h8 = h7->next();
+    printHalfEdgeDetails("\nh8", h8);
+    // Collect vertices
+    VertexRef v1 = h1->vertex();
+    VertexRef v2 = h5->vertex();
+    VertexRef v3 = h3->vertex();
+    VertexRef v4 = h4->vertex();
+    VertexRef v5 = h7->vertex();
+    VertexRef v6 = h8->vertex();
+    // Collect edges
+    EdgeRef e1 = h1->edge();
+    EdgeRef e2 = h2->edge();
+    EdgeRef e3 = h3->edge();
+    EdgeRef e4 = h4->edge();
+    //EdgeRef e5 = h5->edge();
+    EdgeRef e6 = h6->edge();
+    EdgeRef e7 = h7->edge();
+    EdgeRef e8 = h8->edge();
+
+    // Rotate half edge one over anti-clockwise
+    // Re-assign half edges
+    // void set_neighbors(HalfedgeRef next, HalfedgeRef twin, VertexRef vertex, EdgeRef edge,
+    //                       FaceRef face) {
+    h1->set_neighbors(h3, h5, v5, e1, f1);
+    printHalfEdgeDetails("\nh1", h1);
+    h2->set_neighbors(h5, h2->twin(), v2, e2, f2);
+    printHalfEdgeDetails("\nh2", h2);
+    h3->set_neighbors(h4, h3->twin(), v3, e3, f1);
+    printHalfEdgeDetails("\nh3", h3);
+    h4->set_neighbors(h6, h4->twin(), v4, e4, f1);
+    printHalfEdgeDetails("\nh4", h4);
+    h5->set_neighbors(h7, h1, v3, e1, f2);
+    printHalfEdgeDetails("\nh5", h5);
+    h6->set_neighbors(h1, h6->twin(), v1, e6, f1);
+    printHalfEdgeDetails("\nh6", h6);
+    h7->set_neighbors(h8, h7->twin(), v5, e7, f2);
+    printHalfEdgeDetails("\nh7", h7);
+    h8->set_neighbors(h2, h8->twin(), v6, e8, f2);
+    printHalfEdgeDetails("\nh8", h8);
+
+    // Re-assign faces
+    f1->halfedge() = h1;
+    f2->halfedge() = h5;
+
+    // Re-assign vertices
+    v1->halfedge() = h6;
+    v2->halfedge() = h2;
+    v3->halfedge() = h3;
+    v4->halfedge() = h4;
+    v5->halfedge() = h7;
+    v6->halfedge() = h8;
+
+    // re-assgin edges
+    e1->halfedge() = h1;
+    e2->halfedge() = h2;
+    e3->halfedge() = h3;
+    e4->halfedge() = h4;
+    e6->halfedge() = h6;
+    e7->halfedge() = h7;
+    e8->halfedge() = h8;
+
+
+    //h1->set_next(h3);
+    //h3->set_next(h7);
+    // re-assign vertexes
+    //h1->set_vertex(v5);
+    //h5->set_vertex(v3);
+    //h3->set_vertex(v6);
+    //h7->set_vertex(v1);
+
+    
+    // IF the edge is part of a boundary then it cannot be flipped
+
+    //auto h = e->halfedge();
+    
+
+
+    e1->halfedge() = h1;
+
+    return e1;
+    //return std::nullopt;
 }
 
 /*
