@@ -71,14 +71,15 @@ std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::collapse_face(Halfedge_Me
     return std::nullopt;
 }
 
-void printHalfEdgeDetails(const std::string& name, Halfedge_Mesh::HalfedgeRef h) {
-    std::cout << "NAME: " << name << std::endl;
-    std::cout << "Halfedge: " << h->id() << std::endl;
-    std::cout << "Vertex: " << h->vertex()->id() << std::endl;
-    std::cout << "Edge: " << h->edge()->id() << std::endl;
-    std::cout << "Face: " << h->face()->id() << std::endl;
-    std::cout << "Next: " << h->next()->id() << std::endl;
-    std::cout << "Twin: " << h->twin()->id() << std::endl;
+void printHalfEdgeDetails(std::vector<Halfedge_Mesh::HalfedgeRef> h_vec) {
+    for (auto &h : h_vec) {
+        std::cout << "Halfedge: " << h->id() << std::endl;
+        std::cout << "Vertex: " << h->vertex()->id() << std::endl;
+        std::cout << "Edge: " << h->edge()->id() << std::endl;
+        std::cout << "Face: " << h->face()->id() << std::endl;
+        std::cout << "Next: " << h->next()->id() << std::endl;
+        std::cout << "Twin: " << h->twin()->id() << std::endl;
+    }
 }
 /*
     This method should flip the given edge and return an iterator to the
@@ -88,8 +89,35 @@ std::optional<Halfedge_Mesh::EdgeRef> Halfedge_Mesh::flip_edge(Halfedge_Mesh::Ed
 
     (void)e;
     std::cout << "Flip edge " << std::endl;
-    // Collect all halfedges
-    std::vector<HalfedgeRef> halfedges;
+    VertexRef v_start = e->halfedge()->vertex();
+    VertexRef v_twin_start = e->halfedge()->twin()->vertex();
+    std::cout << "In the beginning Starting at vertex " << e->halfedge()->vertex()->id() << std::endl;
+   // Find previous vertex of flipped vertex
+    VertexRef v = v_start;
+    std::cout << "Starting at vertex: " << v->id() << std::endl;
+    VertexRef v_prev = v;
+    VertexRef v_next = v->halfedge()->next()->vertex();
+    std::cout << "v_next: " << v_next->id() << std::endl;
+    while (v_next != v){
+        v_prev = v_next;
+        v_next = v_next->halfedge()->next()->vertex();
+        std::cout << "v_next: " << v_next->id() << std::endl;
+    }
+    std::cout << "v_prev: " << v_prev->id() << std::endl;
+
+    // Find previous vertex of twin flipped vertex
+    VertexRef v_twin = v_twin_start;
+    std::cout << "Starting at vertex: " << v_twin->id() << std::endl;
+    VertexRef v_twin_prev = v_twin;
+    VertexRef v_twin_next = v_twin->halfedge()->next()->vertex();
+    std::cout << "v_twin_next: " << v_next->id() << std::endl;
+    while (v_twin_next != v_twin){
+        v_twin_prev = v_twin_next;
+        v_twin_next = v_twin_next->halfedge()->next()->vertex();
+        std::cout << "v_twin_next: " << v_twin_next->id() << std::endl;
+    }
+    std::cout << "v_twin_prev: " << v_twin_prev->id() << std::endl;
+    
     // This should work for all n-gons
     // The scheme might be the edge would be re-assigned to be between the verteces one rotation away
     // from the original edge
@@ -104,7 +132,66 @@ std::optional<Halfedge_Mesh::EdgeRef> Halfedge_Mesh::flip_edge(Halfedge_Mesh::Ed
         return std::nullopt;
     }
 #endif
+#if 0
+    std::vector<HalfedgeRef> halfedges;
+    // Collect all halfedges
+    HalfedgeRef h1 = e->halfedge();
+    HalfedgeRef h1_twin = e->halfedge()->twin();
+    do {
+        halfedges.push_back(h1);
+        h1 = h1->next();
+        halfedges.push_back(h1_twin);
+        h1_twin = h1_twin->next();
+    } while ((h1 != e->halfedge()) || (h1_twin != e->halfedge()->twin()));
+    printHalfEdgeDetails(halfedges);
+    std::vector<VertexRef> vertices;
+    // COllect vertices
+    for (auto &h : halfedges) {
+        if (std::find(vertices.begin(), vertices.end(), h->vertex()) == vertices.end()) {
+            vertices.push_back(h->vertex());
+        }
+    }
+    std::vector<EdgeRef> edges;
+    // Collect edges
+    for (auto &h : halfedges) {
+        if (std::find(edges.begin(), edges.end(), h->edge()) == edges.end()) {
+            edges.push_back(h->edge());
+        }
+    }
 
+    // Collect faces
+    std::vector<FaceRef> faces;
+    // There are only 2 faces
+    faces.push_back(halfedges[0]->face());
+    faces.push_back(halfedges[1]->face());
+#endif
+    HalfedgeRef h = e->halfedge();
+    FaceRef f = h->face();
+    FaceRef f_twin = h->twin()->face();
+    // Skipping the next halfedge.
+    HalfedgeRef h_flipped = h->next();
+    HalfedgeRef h_flipped_next = h_flipped->next();
+    // This halfedge will change faces since it moves anti-clockwise (this is our scheme)
+    VertexRef v_flipped_next = h_flipped_next->vertex();
+
+    HalfedgeRef h_twin = h->twin();
+    HalfedgeRef h_twin_flipped = h_twin->next();
+    //VertexRef v_twin_flipped = h_twin_flipped->vertex();
+    HalfedgeRef h_twin_flipped_next = h_twin_flipped->next();
+    VertexRef v_twin_flipped_next = h_twin_flipped_next->vertex();
+        // Reasing the halfedges
+    h->set_neighbors(h_flipped_next, h_twin, v_twin_flipped_next, e, f);
+    h_flipped->set_neighbors(h_twin, h_flipped->twin(), h_flipped->vertex(), h_flipped->edge(), f_twin);
+
+   //v_prev->halfedge()->set_neighbors(h_flipped, v_prev->halfedge()->twin(), v_prev, v_prev->halfedge()->edge(), f);
+
+   
+
+    h_twin->set_neighbors(h_twin_flipped_next, h, v_flipped_next, e, f_twin);
+    h_twin_flipped->set_neighbors(h, h_twin_flipped->twin(), h_twin_flipped->vertex(), h_twin_flipped->edge(), f);
+    //v_twin_prev->halfedge()->set_neighbors(h_twin_flipped, v_twin_prev->halfedge()->twin(), v_twin_prev, v_twin_prev->halfedge()->edge(), f_twin);
+
+#if 0
     // Collect faces
     FaceRef f1 = e->halfedge()->face();
     std::cout << "f1: " << f1->id() << std::endl;
@@ -112,21 +199,13 @@ std::optional<Halfedge_Mesh::EdgeRef> Halfedge_Mesh::flip_edge(Halfedge_Mesh::Ed
     std::cout << "f2: " << f2->id() << std::endl;
     // Collect halfedges
     HalfedgeRef h1 = e->halfedge();
-    printHalfEdgeDetails("\nh1", h1);
     HalfedgeRef h5 = e->halfedge()->twin();
-    printHalfEdgeDetails("\nh5", h5);
     HalfedgeRef h2 = h1->next();
-    printHalfEdgeDetails("\nh2", h2);
     HalfedgeRef h3 = h2->next();
-    printHalfEdgeDetails("\nh3",h3);
     HalfedgeRef h4 = h3->next();
-    printHalfEdgeDetails("\nh4",h4);
     HalfedgeRef h6 = h5->next();
-    printHalfEdgeDetails("\nh6",h6);
     HalfedgeRef h7 = h6->next();
-    printHalfEdgeDetails("\nh7", h7);
     HalfedgeRef h8 = h7->next();
-    printHalfEdgeDetails("\nh8", h8);
     // Collect vertices
     VertexRef v1 = h1->vertex();
     VertexRef v2 = h5->vertex();
@@ -149,21 +228,21 @@ std::optional<Halfedge_Mesh::EdgeRef> Halfedge_Mesh::flip_edge(Halfedge_Mesh::Ed
     // void set_neighbors(HalfedgeRef next, HalfedgeRef twin, VertexRef vertex, EdgeRef edge,
     //                       FaceRef face) {
     h1->set_neighbors(h3, h5, v5, e1, f1);
-    printHalfEdgeDetails("\nh1", h1);
+    //printHalfEdgeDetails("\nh1", h1);
     h2->set_neighbors(h5, h2->twin(), v2, e2, f2);
-    printHalfEdgeDetails("\nh2", h2);
+    //printHalfEdgeDetails("\nh2", h2);
     h3->set_neighbors(h4, h3->twin(), v3, e3, f1);
-    printHalfEdgeDetails("\nh3", h3);
+    //printHalfEdgeDetails("\nh3", h3);
     h4->set_neighbors(h6, h4->twin(), v4, e4, f1);
-    printHalfEdgeDetails("\nh4", h4);
+    //printHalfEdgeDetails("\nh4", h4);
     h5->set_neighbors(h7, h1, v3, e1, f2);
-    printHalfEdgeDetails("\nh5", h5);
+    //printHalfEdgeDetails("\nh5", h5);
     h6->set_neighbors(h1, h6->twin(), v1, e6, f1);
-    printHalfEdgeDetails("\nh6", h6);
+    //printHalfEdgeDetails("\nh6", h6);
     h7->set_neighbors(h8, h7->twin(), v5, e7, f2);
-    printHalfEdgeDetails("\nh7", h7);
+    //printHalfEdgeDetails("\nh7", h7);
     h8->set_neighbors(h2, h8->twin(), v6, e8, f2);
-    printHalfEdgeDetails("\nh8", h8);
+    //printHalfEdgeDetails("\nh8", h8);
 
     // Re-assign faces
     f1->halfedge() = h1;
@@ -186,7 +265,6 @@ std::optional<Halfedge_Mesh::EdgeRef> Halfedge_Mesh::flip_edge(Halfedge_Mesh::Ed
     e7->halfedge() = h7;
     e8->halfedge() = h8;
 
-
     //h1->set_next(h3);
     //h3->set_next(h7);
     // re-assign vertexes
@@ -204,8 +282,9 @@ std::optional<Halfedge_Mesh::EdgeRef> Halfedge_Mesh::flip_edge(Halfedge_Mesh::Ed
 
     e1->halfedge() = h1;
 
-    return e1;
-    //return std::nullopt;
+#endif
+    e->halfedge() = h;
+    return e;
 }
 
 /*

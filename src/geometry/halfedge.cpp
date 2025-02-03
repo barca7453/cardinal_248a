@@ -1,5 +1,6 @@
 
 #include "halfedge.h"
+#include <iostream>
 
 #include <map>
 #include <set>
@@ -402,6 +403,7 @@ std::optional<std::pair<Halfedge_Mesh::ElementRef, std::string>> Halfedge_Mesh::
         if(permutation.find(h->next()) == permutation.end()) {
             permutation.insert(h->next());
         } else {
+            std::cout << "Halfedge: " << h->id() << " Next: " << h->next()->id() << std::endl;
             return {{h->next(), "A halfedge is the next of multiple halfedges!"}};
         }
     }
@@ -472,6 +474,7 @@ std::optional<std::pair<Halfedge_Mesh::ElementRef, std::string>> Halfedge_Mesh::
 
         do {
             if(h->face() != f) {
+                std::cout << "Face: " << f->id() << "halfedge: " << h->id() << " Its face is " << h->face()->id() << std::endl;
                 return {{h, "A face's halfedge does not point to that face!"}};
             }
             h = h->next();
