@@ -93,11 +93,17 @@ std::optional<Halfedge_Mesh::EdgeRef> Halfedge_Mesh::flip_edge(Halfedge_Mesh::Ed
     HalfedgeRef h_prev = h_start;
     HalfedgeRef h_next = h_start->next();
     std::cout << "Starting at halfedge: " << h_start->id() << std::endl;
+    std::cout << "halfedge vertex: " << h_start->vertex()->id() << std::endl;
+    std::cout << "vertex halfedge : " << h_start->vertex()->halfedge()->id() << std::endl;
     std::cout << "Next halfedge: " << h_next->id() << std::endl;
+    std::cout << "Next halfedge vertex: " << h_next->vertex()->id() << std::endl;
+    std::cout << "Next vertex halfedge : " << h_next->vertex()->halfedge()->id() << std::endl;
     while (h_next != h_start) {
         h_prev = h_next;
         h_next = h_next->next();
         std::cout << "Next halfedge: " << h_next->id() << std::endl;
+        std::cout << "Next halfedge vertex: " << h_next->vertex()->id() << std::endl;
+        std::cout << "Next vertex halfedge : " << h_next->vertex()->halfedge()->id() << std::endl;
     }
     std::cout << "Prev halfedge: " << h_prev->id() << std::endl;
 
@@ -114,36 +120,7 @@ std::optional<Halfedge_Mesh::EdgeRef> Halfedge_Mesh::flip_edge(Halfedge_Mesh::Ed
     std::cout << "Prev halfedge: " << h_twin_prev->id() << std::endl;
 
 
-   /*
-    VertexRef v_twin_start = e->halfedge()->twin()->vertex();
-    std::cout << "In the beginning Starting at vertex " << e->halfedge()->vertex()->id() << std::endl;
-   // Find previous vertex of flipped vertex
-    VertexRef v = v_start;
-    std::cout << "Starting at vertex: " << v->id() << std::endl;
-    VertexRef v_prev = v;
-    VertexRef v_next = v->halfedge()->next()->vertex();
-    std::cout << "v_next: " << v_next->id() << std::endl;
-    while (v_next != v){
-        v_prev = v_next;
-        v_next = v_next->halfedge()->next()->vertex();
-        std::cout << "v_next: " << v_next->id() << std::endl;
-    }
-    std::cout << "v_prev: " << v_prev->id() << std::endl;
-
-    // Find previous vertex of twin flipped vertex
-    VertexRef v_twin = v_twin_start;
-    std::cout << "Starting at vertex: " << v_twin->id() << std::endl;
-    VertexRef v_twin_prev = v_twin;
-    VertexRef v_twin_next = v_twin->halfedge()->next()->vertex();
-    std::cout << "v_twin_next: " << v_next->id() << std::endl;
-    while (v_twin_next != v_twin){
-        v_twin_prev = v_twin_next;
-        v_twin_next = v_twin_next->halfedge()->next()->vertex();
-        std::cout << "v_twin_next: " << v_twin_next->id() << std::endl;
-    }
-    std::cout << "v_twin_prev: " << v_twin_prev->id() << std::endl;
-    */
-    // This should work for all n-gons
+   // This should work for all n-gons
     // The scheme might be the edge would be re-assigned to be between the verteces one rotation away
     // from the original edge
     // IF the edge is part of a single face then it cannot be flipped
@@ -190,6 +167,12 @@ std::optional<Halfedge_Mesh::EdgeRef> Halfedge_Mesh::flip_edge(Halfedge_Mesh::Ed
     faces.push_back(halfedges[0]->face());
     faces.push_back(halfedges[1]->face());
 #endif
+#if 1
+
+    // Works for all n-gons
+    // Important  for an edge, the previouis haledge needs an appropriate re-assignment of the next
+    // halfedge. This is because the next halfedge is the one that moves anti-clockwise
+    // AFter every set_neighbor the vertex that the halfedge points to needs to be re-assigned to the halfedge. Even though it might seem obvious, it is necessary for the flip to work
     HalfedgeRef h = e->halfedge();
     FaceRef f = h->face();
     FaceRef f_twin = h->twin()->face();
@@ -204,17 +187,25 @@ std::optional<Halfedge_Mesh::EdgeRef> Halfedge_Mesh::flip_edge(Halfedge_Mesh::Ed
     //VertexRef v_twin_flipped = h_twin_flipped->vertex();
     HalfedgeRef h_twin_flipped_next = h_twin_flipped->next();
     VertexRef v_twin_flipped_next = h_twin_flipped_next->vertex();
-        // Reasing the halfedges
+    // Reassign the halfedges
     h->set_neighbors(h_flipped_next, h_twin, v_twin_flipped_next, e, f);
+    v_twin_flipped_next->halfedge() = h;
     h_flipped->set_neighbors(h_twin, h_flipped->twin(), h_flipped->vertex(), h_flipped->edge(), f_twin);
+    h_flipped->vertex()->halfedge() = h_flipped;
     h_prev->set_neighbors(h_twin_flipped, h_prev->twin(), h_prev->vertex(), h_prev->edge(), f);
+    h_prev->vertex()->halfedge() = h_prev;
     f->halfedge() = h; // This face re-assignment seems to be necessary for the flip to work
 
     h_twin->set_neighbors(h_twin_flipped_next, h, v_flipped_next, e, f_twin);
+    v_flipped_next->halfedge() = h_twin; // This vertex re-assignment seems to be necessary for the flip to work
     h_twin_flipped->set_neighbors(h, h_twin_flipped->twin(), h_twin_flipped->vertex(), h_twin_flipped->edge(), f);
+    h_twin_flipped->vertex()->halfedge() = h_twin_flipped;
     h_twin_prev->set_neighbors(h_flipped, h_twin_prev->twin(), h_twin_prev->vertex(), h_twin_prev->edge(), f_twin);
+    h_twin_prev->vertex()->halfedge() = h_twin_prev;
     f_twin->halfedge() = h_twin; // This face re-assignment seems to be necessary for the flip to work
 
+
+#endif
 #if 0
     // Collect faces
     FaceRef f1 = e->halfedge()->face();
@@ -271,23 +262,21 @@ std::optional<Halfedge_Mesh::EdgeRef> Halfedge_Mesh::flip_edge(Halfedge_Mesh::Ed
     // Re-assign faces
     f1->halfedge() = h1;
     f2->halfedge() = h5;
-
-    // Re-assign vertices
+    // Re-assign vertices THIS IS NECESSARY
     v1->halfedge() = h6;
     v2->halfedge() = h2;
     v3->halfedge() = h3;
     v4->halfedge() = h4;
     v5->halfedge() = h7;
     v6->halfedge() = h8;
-
-    // re-assgin edges
-    e1->halfedge() = h1;
-    e2->halfedge() = h2;
-    e3->halfedge() = h3;
-    e4->halfedge() = h4;
-    e6->halfedge() = h6;
-    e7->halfedge() = h7;
-    e8->halfedge() = h8;
+    // re-assgin edges - THIS SEEMS TO BE UNNECESSARY
+    //e1->halfedge() = h1;
+    //e2->halfedge() = h2;
+    //e3->halfedge() = h3;
+    //e4->halfedge() = h4;
+    //e6->halfedge() = h6;
+    //e7->halfedge() = h7;
+    //e8->halfedge() = h8;
 
     //h1->set_next(h3);
     //h3->set_next(h7);
@@ -305,10 +294,13 @@ std::optional<Halfedge_Mesh::EdgeRef> Halfedge_Mesh::flip_edge(Halfedge_Mesh::Ed
 
 
     e1->halfedge() = h1;
+    return e1;
 
 #endif
+#if 1
     e->halfedge() = h;
     return e;
+#endif
 }
 
 /*

@@ -438,6 +438,7 @@ std::optional<std::pair<Halfedge_Mesh::ElementRef, std::string>> Halfedge_Mesh::
 
         do {
             if(h->vertex() != v) {
+                std::cout << "Vertex: " << v->id() << " halfedge: " << h->id() << " Its vertex is " << h->vertex()->id() << std::endl;
                 return {{h, "A vertex's halfedge does not point to that vertex!"}};
             }
             h = h->twin()->next();
