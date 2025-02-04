@@ -89,7 +89,32 @@ std::optional<Halfedge_Mesh::EdgeRef> Halfedge_Mesh::flip_edge(Halfedge_Mesh::Ed
 
     (void)e;
     std::cout << "Flip edge " << std::endl;
-    VertexRef v_start = e->halfedge()->vertex();
+    HalfedgeRef h_start = e->halfedge();
+    HalfedgeRef h_prev = h_start;
+    HalfedgeRef h_next = h_start->next();
+    std::cout << "Starting at halfedge: " << h_start->id() << std::endl;
+    std::cout << "Next halfedge: " << h_next->id() << std::endl;
+    while (h_next != h_start) {
+        h_prev = h_next;
+        h_next = h_next->next();
+        std::cout << "Next halfedge: " << h_next->id() << std::endl;
+    }
+    std::cout << "Prev halfedge: " << h_prev->id() << std::endl;
+
+    HalfedgeRef h_twin_start = e->halfedge()->twin();
+    HalfedgeRef h_twin_prev = h_twin_start;
+    HalfedgeRef h_twin_next = h_twin_start->next();
+    std::cout << "Starting at halfedge: " << h_twin_start->id() << std::endl;
+    std::cout << "Next halfedge: " << h_twin_next->id() << std::endl;
+    while (h_twin_next != h_twin_start) {
+        h_twin_prev = h_twin_next;
+        h_twin_next = h_twin_next->next();
+        std::cout << "Next halfedge: " << h_twin_next->id() << std::endl;
+    }
+    std::cout << "Prev halfedge: " << h_twin_prev->id() << std::endl;
+
+
+   /*
     VertexRef v_twin_start = e->halfedge()->twin()->vertex();
     std::cout << "In the beginning Starting at vertex " << e->halfedge()->vertex()->id() << std::endl;
    // Find previous vertex of flipped vertex
@@ -117,7 +142,7 @@ std::optional<Halfedge_Mesh::EdgeRef> Halfedge_Mesh::flip_edge(Halfedge_Mesh::Ed
         std::cout << "v_twin_next: " << v_twin_next->id() << std::endl;
     }
     std::cout << "v_twin_prev: " << v_twin_prev->id() << std::endl;
-    
+    */
     // This should work for all n-gons
     // The scheme might be the edge would be re-assigned to be between the verteces one rotation away
     // from the original edge
@@ -182,14 +207,13 @@ std::optional<Halfedge_Mesh::EdgeRef> Halfedge_Mesh::flip_edge(Halfedge_Mesh::Ed
         // Reasing the halfedges
     h->set_neighbors(h_flipped_next, h_twin, v_twin_flipped_next, e, f);
     h_flipped->set_neighbors(h_twin, h_flipped->twin(), h_flipped->vertex(), h_flipped->edge(), f_twin);
-
-   //v_prev->halfedge()->set_neighbors(h_flipped, v_prev->halfedge()->twin(), v_prev, v_prev->halfedge()->edge(), f);
-
-   
+    h_prev->set_neighbors(h_twin_flipped, h_prev->twin(), h_prev->vertex(), h_prev->edge(), f);
+    f->halfedge() = h; // This face re-assignment seems to be necessary for the flip to work
 
     h_twin->set_neighbors(h_twin_flipped_next, h, v_flipped_next, e, f_twin);
     h_twin_flipped->set_neighbors(h, h_twin_flipped->twin(), h_twin_flipped->vertex(), h_twin_flipped->edge(), f);
-    //v_twin_prev->halfedge()->set_neighbors(h_twin_flipped, v_twin_prev->halfedge()->twin(), v_twin_prev, v_twin_prev->halfedge()->edge(), f_twin);
+    h_twin_prev->set_neighbors(h_flipped, h_twin_prev->twin(), h_twin_prev->vertex(), h_twin_prev->edge(), f_twin);
+    f_twin->halfedge() = h_twin; // This face re-assignment seems to be necessary for the flip to work
 
 #if 0
     // Collect faces
