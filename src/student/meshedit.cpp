@@ -350,6 +350,23 @@ std::optional<Halfedge_Mesh::FaceRef> Halfedge_Mesh::bevel_vertex(Halfedge_Mesh:
 
     // Reminder: You should set the positions of new vertices (v->pos) to be exactly
     // the same as wherever they "started from."
+    // This is a bevelling operation for a vertex
+    // The vertex is replaced by a face
+    // Create a new face
+    std::vector<HalfedgeRef> halfedges;
+    //FaceRef f = new_face();
+    HalfedgeRef h = v->halfedge(); // starting halfedge
+    HalfedgeRef h_saved_start = v->halfedge(); // starting halfedge
+    while (h->twin()->next() != h_saved_start) {
+        halfedges.push_back(h);
+        h = h->twin()->next();
+    }
+    
+
+    // Create n new verteces, on each of the edges the vertex is connected to
+    // Create n new edges
+    // Create n new halfedges   
+
 
     (void)v;
     return std::nullopt;
